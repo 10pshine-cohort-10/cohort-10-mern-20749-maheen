@@ -3,7 +3,7 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import pinoHttp from 'pino-http';
-import type { LevelWithSilent } from 'pino';
+import type { LevelWithSilent, SerializedRequest, SerializedResponse } from 'pino';
 
 import { logger } from './config/logger';
 import { healthRouter } from './routes/healthRoutes';
@@ -18,6 +18,16 @@ app.use(cors({ origin: process.env.CLIENT_URL ?? 'http://localhost:5173' }));
 app.use(
   pinoHttp({
     logger,
+    // only log what we need. the default also logs the query string and all headers,
+    // which can contain tokens
+    serializers: {
+      req: (req: SerializedRequest) => ({
+        id: req.id,
+        method: req.method,
+        url: req.url.split('?')[0],
+      }),
+      res: (res: SerializedResponse) => ({ statusCode: res.statusCode }),
+    },
     customLogLevel: (_req: IncomingMessage, res: ServerResponse, err?: Error): LevelWithSilent => {
       if (err || res.statusCode >= 500) return 'error';
       if (res.statusCode >= 400) return 'warn';
