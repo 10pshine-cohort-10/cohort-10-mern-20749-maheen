@@ -1,3 +1,4 @@
+import type { Socket } from 'node:net';
 import mysql, { type ConnectionOptions, type Pool, type PoolConnection } from 'mysql2/promise';
 
 export const dbConfig: ConnectionOptions = {
@@ -16,6 +17,11 @@ export const pool: Pool = mysql.createPool({
 });
 
 const PING_TIMEOUT_MS = 3000;
+
+// mysql2's types don't expose the underlying socket, so describe just the part we use
+interface RawConnection {
+  stream?: Socket;
+}
 
 // rejects if the promise takes longer than ms, so callers never wait forever
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
@@ -44,6 +50,9 @@ export async function pingDatabase(): Promise<void> {
   } catch (err) {
     // a connection that failed or hung on ping can't be trusted, so drop it instead of reusing it
     connection.destroy();
+    // destroy() only half-closes the socket, so a dead server could keep it open. force it shut
+    const raw = connection.connection as unknown as RawConnection;
+    raw.stream?.destroy();
     throw err;
   }
 }
