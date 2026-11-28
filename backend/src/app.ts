@@ -2,18 +2,21 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import pinoHttp from 'pino-http';
 import type { LevelWithSilent, SerializedRequest, SerializedResponse } from 'pino';
 
 import { logger } from './config/logger';
 import { healthRouter } from './routes/healthRoutes';
+import { authRouter } from './routes/authRoutes';
 import { notFound } from './middleware/notFound';
 import { errorHandler } from './middleware/errorHandler';
 
 export const app: Express = express();
 
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL ?? 'http://localhost:5173' }));
+// credentials: true lets the react app send and receive the login cookie
+app.use(cors({ origin: process.env.CLIENT_URL ?? 'http://localhost:5173', credentials: true }));
 
 app.use(
   pinoHttp({
@@ -37,8 +40,10 @@ app.use(
 );
 
 app.use(express.json({ limit: '1mb' }));
+app.use(cookieParser());
 
 app.use('/api/health', healthRouter);
+app.use('/api/auth', authRouter);
 
 // these two must come last
 app.use(notFound);

@@ -17,8 +17,19 @@ GRANT ALL PRIVILEGES ON notes_app.* TO 'notes_user'@'localhost';
 
     cd backend
     npm install
-    cp .env.example .env      # then fill in DB_PASSWORD
+    cp .env.example .env      # then fill in DB_PASSWORD and JWT_SECRET
     npm run db:init           # creates the users and notes tables
     npm run dev
 
 Health check: GET http://localhost:5000/api/health (also reports if the database is reachable)
+
+### Auth API
+
+Login state is kept in an httpOnly `token` cookie (JWT, valid for 1 day).
+
+| Method | Route | Body | Notes |
+|---|---|---|---|
+| POST | /api/auth/signup | `{ name, email, password }` | password: 8+ characters. Logs the user in |
+| POST | /api/auth/login | `{ email, password }` | Rate limited to 10 tries / 15 min |
+| POST | /api/auth/logout | | Clears the cookie |
+| GET | /api/auth/me | | Needs login, returns the current user |
